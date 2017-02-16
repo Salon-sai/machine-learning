@@ -26,7 +26,46 @@ def standRegres(xArr, yArr):
     ws = xTx.I * (xMat.T * yMat)
     return ws
 
-if __name__ == '__main__':
+# 局部加权值线性回归
+# (X.T * w * T.I) * X.T * W * y
+def lwlr(testPoint, xArr, yArr, k = 1.0):
+    xMat = mat(xArr); yMat = mat(yArr).T
+    m = shape(xMat)[0]
+    weights = mat(eye(m))
+    for j in range(m):
+        diffMat = testPoint - xMat[j, :]
+        # 构建对角矩阵weights,点x与x(i)越近,w(i,i)将会越大
+        # 随着样本点于待测试点距离的递增,weight的值不断衰减
+        weights[j, j] = exp(diffMat * diffMat.T / (-2.0 * k ** 2))
+    xTx = xMat.T * (weights * xMat)
+    if linalg.det(xTx) == 0.0:
+        print "This matrix is singular, cannot do inverse"
+        return
+    ws = xTx.I * (xMat.T * (weights * yMat))
+    return testPoint * ws
+
+def lwlrTest(testArr, xArr, yArr, k=1.0):
+    m = shape(testArr)[0]
+    yHat = zeros(m)
+    for i in range(m):
+        yHat[i] = lwlr(testArr[i], xArr, yArr, k)
+    return yHat
+
+def drawLwlr():
+    xArr, yArr = loadDataSet('ex0.txt')
+    yHat = lwlrTest(xArr, xArr, yArr, 0.01)
+    xMat = mat(xArr)
+    sortIndex = xMat[:, 1].argsort(0)
+    xSort = xMat[sortIndex][:, 0, :]
+
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    ax.plot(xSort[:, 1], yHat[sortIndex])
+    ax.scatter(xMat[:, 1].flatten().A[0], mat(yArr).T.flatten().A[0], s=2, c='red')
+    plt.show()
+
+
+def drawStandRegres():
     xArr, yArr = loadDataSet('ex0.txt')
     ws = standRegres(xArr, yArr)
 
@@ -45,3 +84,6 @@ if __name__ == '__main__':
     yHat = xCopy * ws
     ax.plot(xCopy[:, 1], yHat)
     plt.show()
+
+if __name__ == '__main__':
+    drawLwlr()
